@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, mint_to, MintTo, Token, TokenAccount}};
-
+use anchor_spl::{associated_token::AssociatedToken, metadata::Metadata, token::{Mint, mint_to, MintTo, Token, TokenAccount}};
+use mpl_token_metadata::pda::{find_master_edition_account, find_metadata_account};
 declare_id!("Cn8qk44ifkVHXRohXJWJuqwd8NvdZDL3r9Eai81i9FcY");
 
 #[program]
@@ -42,8 +42,21 @@ pub struct InitNFT<'info> {
         associated_token::authority = signer,
     )]
     pub associated_token_account: Account<'info, TokenAccount>,
+    /// CHECK - address
+    #[account(
+        mut,
+        address=find_metadata_account(&mint.key()).0,
+    )]
+    pub metadata_account: AccountInfo<'info>,
+    /// CHECK: address
+    #[account(
+        mut,
+        address=find_master_edition_account(&mint.key()).0,
+    )]
+    pub master_edition_account: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_metadata_program: Program<'info, Metadata>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>
 }
