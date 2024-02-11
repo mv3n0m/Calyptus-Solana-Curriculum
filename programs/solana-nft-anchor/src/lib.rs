@@ -1,13 +1,28 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, metadata::Metadata, token::{Mint, mint_to, MintTo, Token, TokenAccount}};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    metadata::{
+        create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
+        CreateMetadataAccountsV3, Metadata,
+    },
+    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+};
 use mpl_token_metadata::pda::{find_master_edition_account, find_metadata_account};
+
 declare_id!("Cn8qk44ifkVHXRohXJWJuqwd8NvdZDL3r9Eai81i9FcY");
 
 #[program]
 pub mod solana_nft_anchor {
+    use anchor_spl::metadata::mpl_token_metadata::types::DataV2;
+
     use super::*;
 
-    pub fn init_nft(ctx: Context<InitNFT>) -> Result<()> {
+    pub fn init_nft(
+        ctx: Context<InitNFT>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
         let cpi_context = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             MintTo {
@@ -18,6 +33,49 @@ pub mod solana_nft_anchor {
         );
 
         mint_to(cpi_context, 1)?;
+
+        let cpi_context = CpiContext::new(
+            ctx.accounts.token_metadata_program.to_account_info(),
+            CreateMetadataAccountsV3 {
+                metadata: ctx.accounts.metadata_account.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
+                mint_authority: ctx.accounts.signer.to_account_info(),
+                update_authority: ctx.accounts.signer.to_account_info(),
+                payer: ctx.accounts.signer.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            },
+        );
+
+        let data_v2: DataV2 = DataV2 {
+            name: name,
+            symbol: symbol,
+            uri: uri,
+            seller_fee_basis_points: 0,
+            creators: None,
+            collection: None,
+            uses: None,
+        };
+
+        create_metadata_accounts_v3(cpi_context, data_v2, false, true, None)?;
+
+        let cpi_context = CpiContext::new(
+            ctx.accounts.token_metadata_program.to_account_info(),
+            CreateMasterEditionV3 {
+                edition: ctx.accounts.master_edition_account.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
+                update_authority: ctx.accounts.signer.to_account_info(),
+                mint_authority: ctx.accounts.signer.to_account_info(),
+                payer: ctx.accounts.signer.to_account_info(),
+                metadata: ctx.accounts.metadata_account.to_account_info(),
+                token_program: ctx.accounts.token_program.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            },
+        );
+
+        create_master_edition_v3(cpi_context, None)?;
+
         Ok(())
     }
 }
