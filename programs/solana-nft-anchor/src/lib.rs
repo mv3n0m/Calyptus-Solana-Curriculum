@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
+use anchor_spl::{associated_token::AssociatedToken, token::{Mint, mint_to, MintTo, Token, TokenAccount}};
 
 declare_id!("Cn8qk44ifkVHXRohXJWJuqwd8NvdZDL3r9Eai81i9FcY");
 
@@ -7,7 +7,17 @@ declare_id!("Cn8qk44ifkVHXRohXJWJuqwd8NvdZDL3r9Eai81i9FcY");
 pub mod solana_nft_anchor {
     use super::*;
 
-    pub fn initialize(ctx: Context<InitNFT>) -> Result<()> {
+    pub fn init_nft(ctx: Context<InitNFT>) -> Result<()> {
+        let cpi_context = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            MintTo {
+                mint: ctx.accounts.mint.to_account_info(),
+                to: ctx.accounts.associated_token_account.to_account_info(),
+                authority: ctx.accounts.signer.to_account_info(),
+            },
+        );
+
+        mint_to(cpi_context, 1)?;
         Ok(())
     }
 }
